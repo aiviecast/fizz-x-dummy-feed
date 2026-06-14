@@ -1,0 +1,4 @@
+[package]
+name = "fizz_x_dummy_feed"
+version = "0.1.0"
+description = "Fizz X dummy feed — the pure simulation logic of the in-memory mention simulator: zero-padded id format (chronological dict order), template cycling, since-filtering. One Almide core, native + wasm."

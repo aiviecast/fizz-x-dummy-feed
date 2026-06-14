@@ -1,0 +1,38 @@
+// wasm — Node の dummy feed から呼ぶ。seq ベースの計算は Int、id parse は string-in→Int。
+// id 文字列の組み立て(format_id)は string-out なので native/ブラウザ側(seq から組む)。
+import self as feed
+import bytes
+import float
+import int
+
+var g_id: Bytes = bytes.new(0)
+
+@export(wasm, "next_seq")
+fn next_seq(cur: Float) -> Float = int.to_float(feed.next_seq(float.to_int(cur)))
+
+@export(wasm, "template_index")
+fn template_index(inject_idx: Float, count: Float) -> Float =
+  int.to_float(feed.template_index(float.to_int(inject_idx), float.to_int(count)))
+
+@export(wasm, "is_newer")
+fn is_newer(seq: Float, since_seq: Float) -> Float =
+  if feed.is_newer(float.to_int(seq), float.to_int(since_seq)) then 1.0 else 0.0
+
+@export(wasm, "id_alloc")
+fn id_alloc(len: Float) -> RawPtr = {
+  g_id = bytes.new(float.to_int(len))
+  bytes.as_mut_ptr(g_id)
+}
+
+// バッファに書かれた id 文字列 → seq(-1=不正)。
+@export(wasm, "parse_seq")
+fn parse_seq() -> Float = int.to_float(feed.parse_seq(bytes.to_string_lossy(g_id)))
+
+effect fn main() -> Unit = {
+  let _a = next_seq(0.0)
+  let _b = template_index(0.0, 3.0)
+  let _c = is_newer(2.0, 1.0)
+  let _d = id_alloc(1.0)
+  let _e = parse_seq()
+  ()
+}

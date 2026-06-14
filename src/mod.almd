@@ -1,0 +1,42 @@
+// fizz_x_dummy_feed — X dummy client(インメモリ mention シミュレータ)の純ロジック(§9)。
+//
+// 責務 (一行): fake mention の id 採番・テンプレ巡回・「sinceId より新しい」判定など、
+// シミュレータの純粋な計算部分を担う。
+//
+// dummy client は実 X API 無しで配信運用を確認するための擬似フィード。タイマー注入や
+// in-memory 配列・push は Node の I/O だが、以下は純粋なので Almide に集約:
+//   - id 採番: `dum-` + seq の **8 桁ゼロ詰め**(zero-pad で辞書順 = 時系列順になる肝)
+//   - 自動注入テンプレの巡回: injectIdx % テンプレ数
+//   - listMentions(sinceId): sinceId より新しい(= seq が大きい)ものだけ返す
+//
+// 移植元: openaituber server/x/dummyClient.ts。
+//
+// 比較やテンプレ選択は **seq(Int)** で行う(id 文字列を wasm 越しに返さない)。
+// id 文字列の組み立ては native / ブラウザ側。
+
+import string
+import int
+
+let PAD_WIDTH = 8
+let PREFIX = "dum-"
+
+// seq → id 文字列 "dum-00000001"(8 桁ゼロ詰め)。native / 表示用。
+fn format_id(seq: Int) -> String = PREFIX + string.pad_start(int.to_string(seq), PAD_WIDTH, "0")
+
+// id 文字列 "dum-00000042" → seq(42)。prefix 不一致や数値でなければ -1。
+fn parse_seq(id: String) -> Int =
+  match string.strip_prefix(id, PREFIX) {
+    none      => 0 - 1,
+    some(rest) => match int.parse(rest) { ok(n) => n, err(_) => 0 - 1 },
+  }
+
+// 次の seq。
+fn next_seq(cur: Int) -> Int = cur + 1
+
+// 自動注入で使うテンプレ index(巡回)。count<=0 は -1。
+fn template_index(inject_idx: Int, count: Int) -> Int =
+  if count <= 0 then 0 - 1 else inject_idx % count
+
+// seq が since_seq より新しいか(zero-pad id の辞書比較 = seq の数値比較)。
+// since_seq < 0 (= 未指定) なら常に新しい扱い。
+fn is_newer(seq: Int, since_seq: Int) -> Bool = since_seq < 0 or seq > since_seq

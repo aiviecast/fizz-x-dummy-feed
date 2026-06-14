@@ -1,0 +1,28 @@
+import self as feed
+test "format_id zero-pads to 8 digits" {
+  assert_eq(feed.format_id(1), "dum-00000001")
+  assert_eq(feed.format_id(42), "dum-00000042")
+  assert_eq(feed.format_id(12345678), "dum-12345678")
+}
+test "parse_seq round-trips; bad input -1" {
+  assert_eq(feed.parse_seq("dum-00000001"), 1)
+  assert_eq(feed.parse_seq("dum-00000042"), 42)
+  assert_eq(feed.parse_seq("xxx"), 0 - 1)
+  assert_eq(feed.parse_seq("dum-abc"), 0 - 1)
+}
+test "zero-pad makes dict order == chronological (seq order)" {
+  // 古い(seq 小)< 新しい(seq 大) が文字列辞書順でも保たれる
+  assert(feed.format_id(9) < feed.format_id(10))     // "dum-00000009" < "dum-00000010"
+}
+test "template cycling" {
+  assert_eq(feed.template_index(0, 3), 0)
+  assert_eq(feed.template_index(7, 3), 1)    // 7%3
+  assert_eq(feed.template_index(0, 0), 0 - 1)
+}
+test "is_newer (since filtering)" {
+  assert_eq(feed.is_newer(5, 3), true)
+  assert_eq(feed.is_newer(3, 5), false)
+  assert_eq(feed.is_newer(3, 3), false)       // 同じは新しくない
+  assert_eq(feed.is_newer(1, 0 - 1), true)    // since 未指定は常に新しい
+  assert_eq(feed.next_seq(41), 42)
+}
