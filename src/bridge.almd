@@ -2,6 +2,7 @@
 // id 文字列の組み立て(format_id)は string-out なので native/ブラウザ側(seq から組む)。
 import self as feed
 import bytes
+import ffi
 import float
 import int
 
@@ -21,7 +22,7 @@ fn is_newer(seq: Float, since_seq: Float) -> Float =
 @export(wasm, "id_alloc")
 fn id_alloc(len: Float) -> RawPtr = {
   g_id = bytes.zeros(int.from_saturating(len))
-  bytes.as_mut_ptr(g_id)
+  ffi.address(g_id)
 }
 
 // バッファに書かれた id 文字列 → seq(-1=不正)。
