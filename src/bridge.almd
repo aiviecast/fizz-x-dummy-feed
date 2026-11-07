@@ -2,37 +2,38 @@
 // id 文字列の組み立て(format_id)は string-out なので native/ブラウザ側(seq から組む)。
 import self as feed
 import bytes
+import ffi
 import float
 import int
 
-var g_id: Bytes = bytes.new(0)
+var g_id: Region = ffi.region(bytes.new())
 
 @export(wasm, "next_seq")
-fn next_seq(cur: Float) -> Float = int.to_float(feed.next_seq(float.to_int(cur)))
+fn next_seq(cur: Float) -> Float = float.from(feed.next_seq(int.from_saturating(cur)))
 
 @export(wasm, "template_index")
 fn template_index(inject_idx: Float, count: Float) -> Float =
-  int.to_float(feed.template_index(float.to_int(inject_idx), float.to_int(count)))
+  float.from(feed.template_index(int.from_saturating(inject_idx), int.from_saturating(count)))
 
 @export(wasm, "is_newer")
 fn is_newer(seq: Float, since_seq: Float) -> Float =
-  if feed.is_newer(float.to_int(seq), float.to_int(since_seq)) then 1.0 else 0.0
+  if feed.is_newer(int.from_saturating(seq), int.from_saturating(since_seq)) then 1.0 else 0.0
 
-@export(wasm, "id_alloc")
-fn id_alloc(len: Float) -> RawPtr = {
-  g_id = bytes.new(float.to_int(len))
-  bytes.as_mut_ptr(g_id)
+@export(wasm, "id_alloc", returns: address)
+effect fn id_alloc(len: Float) -> Region = {
+  g_id = ffi.alloc(int.from_saturating(len))!
+  g_id
 }
 
 // バッファに書かれた id 文字列 → seq(-1=不正)。
 @export(wasm, "parse_seq")
-fn parse_seq() -> Float = int.to_float(feed.parse_seq(bytes.to_string_lossy(g_id)))
+effect fn parse_seq() -> Float = float.from(feed.parse_seq(bytes.to_string_lossy(ffi.to_bytes(g_id)!)))
 
 effect fn main() -> Unit = {
   let _a = next_seq(0.0)
   let _b = template_index(0.0, 3.0)
   let _c = is_newer(2.0, 1.0)
-  let _d = id_alloc(1.0)
-  let _e = parse_seq()
+  let _d = id_alloc(1.0)!
+  let _e = parse_seq()!
   ()
 }
